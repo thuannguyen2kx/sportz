@@ -3,7 +3,7 @@ import { WebSocket, WebSocketServer } from "ws";
 const matchSubsribers = new Map();
 
 function subscribe(matchId, socket) {
-  if (matchSubsribers.has(matchId)) {
+  if (!matchSubsribers.has(matchId)) {
     matchSubsribers.set(matchId, new Set());
   }
 
@@ -17,7 +17,7 @@ function unsubsribe(matchId, socket) {
 
   subscribers.delete(socket);
 
-  if (subcribers.size === 0) {
+  if (subscribers.size === 0) {
     matchSubsribers.delete(matchId);
   }
 }
@@ -49,7 +49,7 @@ function broadcastToMatch(matchId, payload) {
   const message = JSON.stringify(payload);
 
   for (const client of subscribers) {
-    if (client.readyState !== WebSocket.OPEN) {
+    if (client.readyState === WebSocket.OPEN) {
       client.send(message);
     }
   }
@@ -63,6 +63,7 @@ function handleMessage(socket, data) {
   } catch (error) {
     sendJson(socket, { type: "error", message: "Invalid JSON" });
   }
+
   if (message?.type === "subscribe" && Number.isInteger(message.matchId)) {
     subscribe(message.matchId, socket);
     socket.subscriptions.add(message.matchId);
@@ -90,29 +91,33 @@ export function attachWebSocketServer(server) {
     if (pathname !== "/ws") {
       return;
     }
-
-    wss.on("connection", async (socket, req) => {
-      socket.isAlive = true;
-      socket.on("pong", () => {
-        socket.isAlive = true;
-      });
-
-      socket.subscriptions = new Set();
-
-      sendJson(socket, { type: "welcome" });
-
-      socket.on("messsage", (data) => {
-        handleMessage(socket, data);
-      });
-
-      socket.on("error", () => {
-        socket.terminate();
-      });
-      socket.on("close", () => {
-        cleanupSubscriptions(socket);
-      });
-      socket.on("error", console.error);
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      wss.emit("connection", ws, req);
     });
+  });
+
+  wss.on("connection", async (socket, req) => {
+    console.log("--- socket ---", socket);
+    socket.isAlive = true;
+    socket.on("pong", () => {
+      socket.isAlive = true;
+    });
+
+    socket.subscriptions = new Set();
+
+    sendJson(socket, { type: "welcome" });
+
+    socket.on("message", (data) => {
+      handleMessage(socket, data);
+    });
+
+    socket.on("error", () => {
+      socket.terminate();
+    });
+    socket.on("close", () => {
+      cleanupSubscriptions(socket);
+    });
+    socket.on("error", console.error);
   });
 
   const interval = setInterval(() => {
