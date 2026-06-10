@@ -36,26 +36,27 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   })();
 
   useEffect(() => {
+    const pulseTimeouts = pulseTimeoutRef.current;
     const prevScore = prevScoreRef.current;
     const homeChanged = prevScore.home !== match.homeScore;
     const awayChanged = prevScore.away !== match.awayScore;
 
     if (homeChanged) {
       setHomePulse(true);
-      if (pulseTimeoutRef.current.home) {
-        clearTimeout(pulseTimeoutRef.current.home);
+      if (pulseTimeouts.home) {
+        clearTimeout(pulseTimeouts.home);
       }
-      pulseTimeoutRef.current.home = setTimeout(() => {
+      pulseTimeouts.home = setTimeout(() => {
         setHomePulse(false);
       }, 900);
     }
 
     if (awayChanged) {
       setAwayPulse(true);
-      if (pulseTimeoutRef.current.away) {
-        clearTimeout(pulseTimeoutRef.current.away);
+      if (pulseTimeouts.away) {
+        clearTimeout(pulseTimeouts.away);
       }
-      pulseTimeoutRef.current.away = setTimeout(() => {
+      pulseTimeouts.away = setTimeout(() => {
         setAwayPulse(false);
       }, 900);
     }
@@ -63,11 +64,11 @@ export const MatchCard: React.FC<MatchCardProps> = ({
     prevScoreRef.current = { home: match.homeScore, away: match.awayScore };
 
     return () => {
-      if (pulseTimeoutRef.current.home) {
-        clearTimeout(pulseTimeoutRef.current.home);
+      if (pulseTimeouts.home) {
+        clearTimeout(pulseTimeouts.home);
       }
-      if (pulseTimeoutRef.current.away) {
-        clearTimeout(pulseTimeoutRef.current.away);
+      if (pulseTimeouts.away) {
+        clearTimeout(pulseTimeouts.away);
       }
     };
   }, [match.homeScore, match.awayScore]);

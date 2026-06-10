@@ -15,6 +15,10 @@ export const matchRouter = Router();
 
 const MAX_LIMIT = 100;
 
+function formatZodError(error) {
+  return error.issues;
+}
+
 matchRouter.get("/", async (req, res) => {
   const parsed = listMatchQuerySchema.safeParse(req.query);
 
@@ -113,14 +117,14 @@ matchRouter.patch("/:id/score", async (req, res) => {
       return res.status(404).json({ error: "Match not found" });
     }
 
-    await syncMatchStatus(existing, async (nextStatus) => {
+    const currentStatus = await syncMatchStatus(existing, async (nextStatus) => {
       await db
         .update(matches)
         .set({ status: nextStatus })
         .where(eq(matches.id, matchId));
     });
 
-    if (existing.status !== MATCH_STATUS.LIVE) {
+    if (currentStatus !== MATCH_STATUS.LIVE) {
       return res.status(409).json({ error: "Match is not live" });
     }
 
@@ -130,12 +134,14 @@ matchRouter.patch("/:id/score", async (req, res) => {
         homeScore: bodyParsed.data.homeScore,
         awayScore: bodyParsed.data.awayScore,
       })
-      .where(eq(matches.id, matchId)).returning;
+      .where(eq(matches.id, matchId))
+      .returning();
 
     if (res.app.locals.broadcastScoreUpdate) {
       res.app.locals.broadcastScoreUpdate(matchId, {
         homeScore: updated.homeScore,
         awayScore: updated.awayScore,
+        status: updated.status,
       });
     }
 

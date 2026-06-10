@@ -3,7 +3,7 @@ export interface Match {
   sport: string;
   homeTeam: string;
   awayTeam: string;
-  status: string; // Allow flexible status strings from API
+  status: string;
   startTime: string;
   endTime?: string;
   homeScore: number;
@@ -35,34 +35,50 @@ export interface Commentary {
   metadata?: Record<string, unknown>;
   tags?: string[];
   createdAt?: string;
+  eventId?: string;
 }
 
 export interface CommentaryResponse {
   data: Commentary[];
 }
 
-// WebSocket Message Types
-export interface WSMessageCommentary {
-  type: "commentary";
+interface WSEventBase {
+  eventId: string;
+  occurredAt: string;
+}
+
+export interface WSMessageMatchCreated extends WSEventBase {
+  type: "match_created";
+  data: Match;
+}
+
+export interface WSMessageCommentaryCreated extends WSEventBase {
+  type: "commentary_created";
+  matchId: string | number;
   data: Commentary;
 }
 
-export interface WSMessageScore {
+export interface WSMessageScore extends WSEventBase {
   type: "score_update";
   matchId: string | number;
   data: {
     homeScore: number;
     awayScore: number;
+    status?: string;
   };
 }
 
 export interface WSMessageWelcome {
   type: "welcome";
-  message?: string;
+  occurredAt: string;
+  userId: string;
+  heartbeatIntervalMs: number;
+  maxSubscriptions: number;
 }
 
 export interface WSMessagePong {
   type: "pong";
+  occurredAt: string;
 }
 
 export interface WSMessageError {
@@ -86,22 +102,19 @@ export interface WSMessageSubscriptions {
   matchIds: Array<string | number>;
 }
 
-export interface WSMessageSubscribedAll {
-  type: "subscribed_all";
-}
-
-export interface WSMessageUnsubscribedAll {
-  type: "unsubscribed_all";
-}
-
 export type WSMessage =
-  | WSMessageCommentary
+  | WSMessageMatchCreated
+  | WSMessageCommentaryCreated
   | WSMessageScore
   | WSMessageWelcome
   | WSMessagePong
   | WSMessageError
   | WSMessageSubscribed
   | WSMessageUnsubscribed
-  | WSMessageSubscriptions
-  | WSMessageSubscribedAll
-  | WSMessageUnsubscribedAll;
+  | WSMessageSubscriptions;
+
+export type WSClientMessage =
+  | { type: "subscribe_match"; matchId: string | number }
+  | { type: "unsubscribe_match"; matchId: string | number }
+  | { type: "set_subscriptions"; matchIds: Array<string | number> }
+  | { type: "ping" };

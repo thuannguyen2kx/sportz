@@ -32,7 +32,7 @@ commentaryRouter.get("/", async (req, res) => {
   }
 
   try {
-    const { id: matchId } = paramsResult.data.id;
+    const { id: matchId } = paramsResult.data;
     const { limit = 10 } = queryResult.data;
 
     const safeLimit = Math.min(limit, MAX_LIMIT);
@@ -79,10 +79,12 @@ commentaryRouter.post("/", async (req, res) => {
       })
       .returning();
 
-    if (res.app.locals.broadcastCommentary) {
-      res.app.locals.broadcastCommentary(result.matchId, result);
+    if (res.app.locals.broadcastCommentaryCreated) {
+      res.app.locals.broadcastCommentaryCreated(result.matchId, result);
     }
 
     res.status(201).json({ data: result });
-  } catch (error) {}
+  } catch (error) {
+    res.status(500).json({ error: "Failed to create commentary" });
+  }
 });

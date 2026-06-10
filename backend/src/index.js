@@ -19,11 +19,16 @@ app.get("/", (req, res) => {
 app.use("/matches", matchRouter);
 app.use("/matches/:id/commentary", commentaryRouter);
 
-const { broadcastMatchCreated, broadcastCommentary } =
-  attachWebSocketServer(server);
+const {
+  broadcastMatchCreated,
+  broadcastScoreUpdate,
+  broadcastCommentaryCreated,
+  close: closeWebSocketServer,
+} = attachWebSocketServer(server);
 
 app.locals.broadcastMatchCreated = broadcastMatchCreated;
-app.locals.broadcastCommentary = broadcastCommentary;
+app.locals.broadcastScoreUpdate = broadcastScoreUpdate;
+app.locals.broadcastCommentaryCreated = broadcastCommentaryCreated;
 
 server.listen(PORT, () => {
   const baseUrl =
@@ -34,3 +39,22 @@ server.listen(PORT, () => {
     `WebSocket Server is running on ${baseUrl.replace("http", "ws")}/ws`,
   );
 });
+
+function shutdown(signal) {
+  console.log(JSON.stringify({ level: "info", message: "shutdown_started", signal }));
+  closeWebSocketServer();
+  server.close(() => {
+    console.log(JSON.stringify({ level: "info", message: "shutdown_complete" }));
+    process.exit(0);
+  });
+
+  setTimeout(() => {
+    console.error(
+      JSON.stringify({ level: "error", message: "shutdown_forced", signal }),
+    );
+    process.exit(1);
+  }, 10000).unref();
+}
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);

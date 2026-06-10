@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { LiveFeed } from "./components/LiveFeed";
 import { MatchCard } from "./components/MatchCard";
 import { StatusIndicator } from "./components/StatusIndicator";
@@ -25,17 +25,12 @@ const App: React.FC = () => {
   } = useMatchData();
 
   const totalPages = Math.max(1, Math.ceil(matches.length / pageSize));
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
+  const safeCurrentPage = Math.min(currentPage, totalPages);
 
   const pagedMatches = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
+    const startIndex = (safeCurrentPage - 1) * pageSize;
     return matches.slice(startIndex, startIndex + pageSize);
-  }, [matches, currentPage, pageSize]);
+  }, [matches, safeCurrentPage, pageSize]);
 
   return (
     <div className="min-h-screen p-4 md:p-8 font-sans">
@@ -148,14 +143,14 @@ const App: React.FC = () => {
             {!isLoading && !error && matches.length > pageSize && (
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                 <span className="text-xs font-medium text-gray-500">
-                  Page {currentPage} of {totalPages}
+                  Page {safeCurrentPage} of {totalPages}
                 </span>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() =>
                       setCurrentPage((prev) => Math.max(1, prev - 1))
                     }
-                    disabled={currentPage === 1}
+                    disabled={safeCurrentPage === 1}
                     className={`
                       px-3 py-1.5 rounded-lg text-xs font-bold border-2 border-black transition-all
                       ${currentPage === 1 ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-white hover:bg-gray-50"}
@@ -167,7 +162,7 @@ const App: React.FC = () => {
                     onClick={() =>
                       setCurrentPage((prev) => Math.min(totalPages, prev + 1))
                     }
-                    disabled={currentPage === totalPages}
+                    disabled={safeCurrentPage === totalPages}
                     className={`
                       px-3 py-1.5 rounded-lg text-xs font-bold border-2 border-black transition-all
                       ${currentPage === totalPages ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-white hover:bg-gray-50"}
@@ -239,7 +234,7 @@ const App: React.FC = () => {
                   </code>{" "}
                   or{" "}
                   <code className="text-xs bg-gray-100 p-0.5 border border-gray-300 rounded">
-                    commentary
+                    commentary_created
                   </code>{" "}
                   events from the server. The card score updates instantly, and
                   the right panel fills with text.
